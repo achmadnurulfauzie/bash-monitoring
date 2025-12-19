@@ -1,0 +1,27 @@
+[Unit]
+Description=System Monitoring Service with Telegram/Google Chat Notifications
+Documentation=man:monitoring(8)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/monitoring
+EnvironmentFile=/opt/monitoring/config/.env
+ExecStart=/opt/monitoring/monitoring.sh
+
+# Retry policy
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=system-monitor
+
+# Security
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/monitoring/logs
+
+# Timeout
+TimeoutStartSec=30
