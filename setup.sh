@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Setup script untuk system monitoring
+# Setup script for system monitoring installation
 
 set -euo pipefail
 
@@ -12,16 +12,16 @@ echo "================================"
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
-    echo "❌ Script harus dijalankan sebagai root (gunakan sudo)"
+    echo "❌ This script must be run as root (use sudo)"
     exit 1
 fi
 
-# 1. Buat direktori installation
-echo "📁 Membuat direktori instalasi..."
+# 1. Create installation directory
+echo "📁 Creating installation directory..."
 mkdir -p "$INSTALL_DIR"/{config,logs,systemd}
 
 # 2. Copy files
-echo "📋 Copy files..."
+echo "📋 Copying files..."
 cp monitoring.sh "$INSTALL_DIR/"
 chmod +x "$INSTALL_DIR/monitoring.sh"
 
@@ -30,36 +30,36 @@ chmod 600 "$INSTALL_DIR/config/.env"
 
 cp systemd/system-monitor.{service,timer} "$INSTALL_DIR/systemd/"
 
-# 3. Symlink ke systemd
-echo "🔗 Setup systemd service..."
+# 3. Symlink to systemd
+echo "🔗 Setting up systemd service..."
 ln -sf "$INSTALL_DIR/systemd/system-monitor.service" "$SYSTEMD_DIR/"
 ln -sf "$INSTALL_DIR/systemd/system-monitor.timer" "$SYSTEMD_DIR/"
 
 # 4. Reload systemd daemon
-echo "🔄 Reload systemd daemon..."
+echo "🔄 Reloading systemd daemon..."
 systemctl daemon-reload
 
 # 5. Enable timer
-echo "⚙️  Enable system-monitor.timer..."
+echo "⚙️  Enabling system-monitor.timer..."
 systemctl enable system-monitor.timer
 
 echo ""
 echo "================================"
-echo "✅ Setup selesai!"
+echo "✅ Setup completed successfully!"
 echo ""
-echo "📝 LANGKAH SELANJUTNYA:"
-echo "1. Edit konfigurasi:"
+echo "📝 NEXT STEPS:"
+echo "1. Edit configuration file:"
 echo "   nano $INSTALL_DIR/config/.env"
 echo ""
-echo "2. Masukkan Telegram Bot Token dan Chat ID (atau Google Chat Webhook)"
+echo "2. Enter Telegram Bot Token and Chat ID (or Google Chat Webhook)"
 echo ""
-echo "3. Mulai timer:"
+echo "3. Start the timer:"
 echo "   sudo systemctl start system-monitor.timer"
 echo ""
-echo "4. Cek status:"
+echo "4. Check status:"
 echo "   sudo systemctl status system-monitor.timer"
 echo "   sudo journalctl -u system-monitor.timer -f"
 echo ""
-echo "5. Jalankan test manual:"
+echo "5. Run manual test:"
 echo "   sudo $INSTALL_DIR/monitoring.sh"
 echo ""

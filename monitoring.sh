@@ -1,46 +1,46 @@
 #!/bin/bash
 
 ##############################################################################
-# System Monitoring Script dengan Notifikasi ke Telegram/Google Chat
-# Deskripsi: Monitor CPU, Memory, Disk dan kirim alert jika melebihi threshold
-# Author: System Admin
+# System Monitoring Script with Telegram/Google Chat Notifications
+# Description: Monitor CPU, Memory, Disk and send alerts when exceeding threshold
+# Author: System Administrator
 # Version: 1.0
 ##############################################################################
 
 set -euo pipefail
 
-# ==================== KONFIGURASI ====================
-# Load configuration dari .env file
+# ==================== CONFIGURATION ====================
+# Load configuration from .env file
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/config/.env"
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "[ERROR] File konfigurasi tidak ditemukan: $CONFIG_FILE"
+    echo "[ERROR] Configuration file not found: $CONFIG_FILE"
     exit 1
 fi
 
 source "$CONFIG_FILE"
 
-# Validasi variabel wajib
+# Validate required variables
 REQUIRED_VARS=("NOTIFICATION_TYPE" "CPU_THRESHOLD" "MEMORY_THRESHOLD" "DISK_THRESHOLD" "ALERT_TITLE")
 for var in "${REQUIRED_VARS[@]}"; do
     if [[ -z "${!var:-}" ]]; then
-        echo "[ERROR] Variabel wajib tidak dikonfigurasi: $var"
+        echo "[ERROR] Required variable not configured: $var"
         exit 1
     fi
 done
 
-# ==================== VARIABEL LOGGING ====================
+# ==================== LOGGING VARIABLES ====================
 LOG_DIR="${SCRIPT_DIR}/logs"
 LOG_FILE="${LOG_DIR}/monitoring.log"
 ERROR_LOG="${LOG_DIR}/monitoring-error.log"
 HOSTNAME_VAR=$(hostname)
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# Buat direktori logs jika belum ada
+# Create logs directory if not exists
 mkdir -p "$LOG_DIR"
 
-# ==================== FUNGSI LOGGING ====================
+# ==================== LOGGING FUNCTIONS ====================
 log_info() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [INFO] $*" | tee -a "$LOG_FILE"
 }
@@ -55,11 +55,11 @@ log_debug() {
     fi
 }
 
-# ==================== FUNGSI UTILITY ====================
+# ==================== UTILITY FUNCTIONS ====================
 
-# Fungsi untuk mendapatkan persentase CPU
+# Function to get CPU usage percentage
 # get_cpu_usage() {
-#     # Method: menggunakan top dengan interval 1 detik
+#     # Method: using top with 1 second interval
 #     top -bn2 -d 0.5 | grep "Cpu(s)" | tail -n1 | awk '{print int(100 - $8)}'
 # }
 get_cpu_usage() {
@@ -88,38 +88,38 @@ get_cpu_usage() {
         echo "0"
     fi
 }
-# Fungsi untuk mendapatkan persentase Memory
+# Function to get Memory usage percentage
 get_memory_usage() {
     free | grep "^Mem" | awk '{printf "%.0f\n", ($3/$2) * 100}'
 }
 
-# Fungsi untuk mendapatkan persentase Disk pada root filesystem
+# Function to get Disk usage percentage on root filesystem
 get_disk_usage() {
     df / | tail -n1 | awk '{print $5}' | sed 's/%//'
 }
 
-# Fungsi untuk mendapatkan 3 proses dengan memory tertinggi
+# Function to get top 3 processes by memory usage
 get_top_memory_processes() {
     ps aux --sort=-%mem | head -n 4 | tail -n 3 | \
     awk '{printf "  • %s (PID: %d) - %.2f%% (%.0fMB)\n", $11, $2, $4, $6/1024}' || \
-    echo "  • Tidak ada data tersedia"
+    echo "  • No data available"
 }
 
-# Fungsi untuk mendapatkan 3 proses dengan CPU tertinggi
+# Function to get top 3 processes by CPU usage
 get_top_cpu_processes() {
     ps aux --sort=-%cpu | head -n 4 | tail -n 3 | \
     awk '{printf "  • %s (PID: %d) - %.2f%%\n", $11, $2, $3}' || \
-    echo "  • Tidak ada data tersedia"
+    echo "  • No data available"
 }
 
-# ==================== FUNGSI NOTIFIKASI ====================
+# ==================== NOTIFICATION FUNCTIONS ====================
 
-# Fungsi mengirim notifikasi ke Telegram
+# Function to send notification to Telegram
 send_telegram_notification() {
     local message="$1"
     
     if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]] || [[ -z "${TELEGRAM_CHAT_ID:-}" ]]; then
-        log_error "Telegram belum dikonfigurasi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID kosong)"
+        log_error "Telegram is not configured (TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is empty)"
         return 1
     fi
     
@@ -131,24 +131,24 @@ send_telegram_notification() {
         2>&1)
     
     if echo "$response" | grep -q '"ok":true'; then
-        log_info "Notifikasi Telegram berhasil dikirim"
+        log_info "Telegram notification sent successfully"
         return 0
     else
-        log_error "Gagal mengirim notifikasi Telegram: $response"
+        log_error "Failed to send Telegram notification: $response"
         return 1
     fi
 }
 
-# Fungsi mengirim notifikasi ke Google Chat
+# Function to send notification to Google Chat
 send_google_chat_notification() {
     local message="$1"
     
     if [[ -z "${GOOGLE_CHAT_WEBHOOK_URL:-}" ]]; then
-        log_error "Google Chat belum dikonfigurasi (GOOGLE_CHAT_WEBHOOK_URL kosong)"
+        log_error "Google Chat is not configured (GOOGLE_CHAT_WEBHOOK_URL is empty)"
         return 1
     fi
     
-    # Format pesan untuk Google Chat (menggunakan card format)
+    # Format message for Google Chat (using card format)
     local json_payload=$(cat <<EOF
 {
   "text": "$message"
@@ -162,15 +162,15 @@ EOF
         2>&1)
     
     if echo "$response" | grep -q '"name"'; then
-        log_info "Notifikasi Google Chat berhasil dikirim"
+        log_info "Google Chat notification sent successfully"
         return 0
     else
-        log_error "Gagal mengirim notifikasi Google Chat: $response"
+        log_error "Failed to send Google Chat notification: $response"
         return 1
     fi
 }
 
-# Fungsi wrapper untuk mengirim notifikasi
+# Wrapper function to send notification
 send_notification() {
     local message="$1"
     
@@ -186,13 +186,13 @@ send_notification() {
             send_google_chat_notification "$message"
             ;;
         *)
-            log_error "Tipe notifikasi tidak valid: $NOTIFICATION_TYPE"
+            log_error "Invalid notification type: $NOTIFICATION_TYPE"
             return 1
             ;;
     esac
 }
 
-# ==================== FUNGSI PEMBUAT PESAN ====================
+# ==================== MESSAGE BUILDER FUNCTIONS ====================
 
 create_alert_message() {
     local cpu_usage="$1"
@@ -203,23 +203,23 @@ create_alert_message() {
     local message="🚨 <b>SYSTEM ALERT - $ALERT_TITLE</b> 🚨
     
 <b>Host:</b> <code>$HOSTNAME_VAR</code>
-<b>Waktu:</b> <code>$TIMESTAMP</code>
+<b>Time:</b> <code>$TIMESTAMP</code>
 
-<b>📊 STATUS SISTEM:</b>
+<b>📊 SYSTEM STATUS:</b>
 • CPU: <code>${cpu_usage}%</code>
 • Memory: <code>${memory_usage}%</code>
 • Disk: <code>${disk_usage}%</code>
 
-<b>⚠️ ALASAN ALERT:</b>
+<b>⚠️ ALERT REASONS:</b>
 $alert_reasons
 
-<b>🔴 TOP 3 PROSES (Memory):</b>
+<b>🔴 TOP 3 PROCESSES (Memory):</b>
 $(get_top_memory_processes)
 
-<b>🔴 TOP 3 PROSES (CPU):</b>
+<b>🔴 TOP 3 PROCESSES (CPU):</b>
 $(get_top_cpu_processes)
 
-<b>Threshold yang Diatur:</b>
+<b>Configured Thresholds:</b>
 • CPU: ${CPU_THRESHOLD}%
 • Memory: ${MEMORY_THRESHOLD}%
 • Disk: ${DISK_THRESHOLD}%
@@ -228,7 +228,7 @@ $(get_top_cpu_processes)
     echo "$message"
 }
 
-# ==================== FUNGSI MONITORING ====================
+# ==================== MONITORING FUNCTIONS ====================
 
 check_thresholds() {
     local cpu_usage=$(get_cpu_usage)
@@ -245,34 +245,34 @@ check_thresholds() {
     # Check CPU
     if (( cpu_usage >= CPU_THRESHOLD )); then
         alert_triggered=true
-        alert_reasons+="• ❌ CPU melebihi threshold: ${cpu_usage}% ≥ ${CPU_THRESHOLD}%\n"
+        alert_reasons+="• ❌ CPU exceeded threshold: ${cpu_usage}% ≥ ${CPU_THRESHOLD}%\n"
     fi
     
     # Check Memory
     if (( memory_usage >= MEMORY_THRESHOLD )); then
         alert_triggered=true
-        alert_reasons+="• ❌ Memory melebihi threshold: ${memory_usage}% ≥ ${MEMORY_THRESHOLD}%\n"
+        alert_reasons+="• ❌ Memory exceeded threshold: ${memory_usage}% ≥ ${MEMORY_THRESHOLD}%\n"
     fi
     
     # Check Disk
     if (( disk_usage >= DISK_THRESHOLD )); then
         alert_triggered=true
-        alert_reasons+="• ❌ Disk melebihi threshold: ${disk_usage}% ≥ ${DISK_THRESHOLD}%\n"
+        alert_reasons+="• ❌ Disk exceeded threshold: ${disk_usage}% ≥ ${DISK_THRESHOLD}%\n"
     fi
     
-    # Jika ada threshold yang terlampaui, kirim notifikasi
+    # If any threshold is exceeded, send notification
     if $alert_triggered; then
-        log_info "Alert terdeteksi! CPU: ${cpu_usage}%, Memory: ${memory_usage}%, Disk: ${disk_usage}%"
+        log_info "Alert detected! CPU: ${cpu_usage}%, Memory: ${memory_usage}%, Disk: ${disk_usage}%"
         
         local message=$(create_alert_message "$cpu_usage" "$memory_usage" "$disk_usage" "$alert_reasons")
         
         if send_notification "$message"; then
-            log_info "Notifikasi alert berhasil dikirim"
+            log_info "Alert notification sent successfully"
         else
-            log_error "Gagal mengirim notifikasi alert"
+            log_error "Failed to send alert notification"
         fi
     else
-        log_debug "✅ Semua metrik dalam kondisi normal"
+        log_debug "✅ All metrics are within normal limits"
     fi
 }
 
@@ -280,7 +280,7 @@ check_thresholds() {
 
 main() {
     log_info "=========================================="
-    log_info "Memulai system monitoring check"
+    log_info "Starting system monitoring check"
     log_info "Notification Type: $NOTIFICATION_TYPE"
     log_info "CPU Threshold: $CPU_THRESHOLD%"
     log_info "Memory Threshold: $MEMORY_THRESHOLD%"
@@ -289,8 +289,8 @@ main() {
     
     check_thresholds
     
-    log_info "Monitoring check selesai"
+    log_info "Monitoring check completed"
 }
 
-# Jalankan main function
+# Run main function
 main "$@"

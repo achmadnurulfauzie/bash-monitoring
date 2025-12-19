@@ -4,10 +4,10 @@ Documentation=man:monitoring(8)
 Requires=system-monitor.service
 
 [Timer]
-# Jalankan setiap 5 menit
+# Run every 5 minutes
 OnBootSec=1min
 OnUnitActiveSec=5min
-# Randomize eksekusi dalam 0-30 detik untuk menghindari spike
+# Randomize execution within 0-30 seconds to avoid spike
 RandomizedDelaySec=30sec
 Persistent=true
 
